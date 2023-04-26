@@ -3,6 +3,7 @@ from utils import *
 from models import CreateOrderModel, Order
 from pydantic import BaseModel, ValidationError
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.middleware.cors import CORSMiddleware
 import pymongo
 import certifi
 from uuid import UUID
@@ -12,6 +13,22 @@ db_client = pymongo.MongoClient(mongo_db_url, tlsCAFile = certifi.where(), uuidR
 
 app = FastAPI()
 authentication_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "https://example.com",
+    "https://www.example.com",
+]
+
+# Enable CORS for all origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # models
 class User(BaseModel):
@@ -161,7 +178,9 @@ def viewOrders(user: User = Depends(get_current_user)):
 def cancelOrder(tracking_id: UUID, user: User = Depends(get_current_user)):
     # this endpoint will first check if the order those exist in the database 
     orderCollection = db_client.sender.order
-    order = orderCollection.find_one({"tracking_id": {tracking_id}})
+    order = orderCollection.find_one({"tracking_id": {UUID(tracking_id)}})
     if order:
         # if the order is not null, meaning exists in the database then
+        # update the status of the order 
+        print(order, type(order))
         return {"status":"My name is sydney"}
