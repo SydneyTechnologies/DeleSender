@@ -1,13 +1,14 @@
 from fastapi import FastAPI, HTTPException, status, Depends
 from utils import *
+from models import CreateOrderModel, Order
 from pydantic import BaseModel, ValidationError
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 import pymongo
 import certifi
-
+from uuid import UUID
 
 mongo_db_url = config("MONGO_DB_URL")
-db_client = pymongo.MongoClient(mongo_db_url, tlsCAFile = certifi.where())
+db_client = pymongo.MongoClient(mongo_db_url, tlsCAFile = certifi.where(), uuidRepresentation="standard")
 
 app = FastAPI()
 authentication_scheme = OAuth2PasswordBearer(tokenUrl="login")
@@ -125,6 +126,42 @@ def get_current_user(token: str = Depends(OAuth2PasswordBearer(tokenUrl="/login"
         )
     return User(**user)
 
-@app.get("/orders", summary="This endpoint shows all the orders associated with a specific user")
-def viewOrders(user= Depends(get_current_user)):
-    return user
+@app.post("/orders", summary="This endpoint that creates orders associated with a user")
+def createOrder(order: CreateOrderModel, user: User = Depends(get_current_user)):
+    order_collection = db_client.sender.order 
+    # we take the order model and update the actual order 
+    # first we check if the user creating the request is actually this user 
+    if order.owner_email == user.email:
+        # if the are the same users then proceed to creating the order 
+        new_order = Order(**order.dict())
+        # add the order to the db
+        print(new_order.dict())
+        inserted_order = order_collection.insert_one(new_order.dict())
+        if inserted_order.acknowledged:
+            return new_order
+        else:
+            raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail="Order creating failed")
+    else: 
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Wrong user")
+
+
+@app.get("/orders", summary="This endpoint list all the orders of the current user")
+def viewOrders(user: User = Depends(get_current_user)):
+    order_collection = db_client.sender.order 
+    try: 
+        print(user.email)
+        results = order_collection.find({"owner_email": user.email})
+        # get all the orders of the current user 
+
+        return [Order(**result) for result in results]
+    except:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+@app.put("/orders/{tracking_id}/cancel", summary="This endpoint is responsible for cancelling a users order")
+def cancelOrder(tracking_id: UUID, user: User = Depends(get_current_user)):
+    # this endpoint will first check if the order those exist in the database 
+    orderCollection = db_client.sender.order
+    order = orderCollection.find_one({"tracking_id": {tracking_id}})
+    if order:
+        # if the order is not null, meaning exists in the database then
+        return {"status":"My name is sydney"}
