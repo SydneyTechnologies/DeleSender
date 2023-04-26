@@ -17,6 +17,7 @@ authentication_scheme = OAuth2PasswordBearer(tokenUrl="login")
 origins = [
     "http://localhost",
     "http://localhost:3000",
+    "http://localhost:3001",
     "https://example.com",
     "https://www.example.com",
 ]
@@ -175,12 +176,15 @@ def viewOrders(user: User = Depends(get_current_user)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
 @app.put("/orders/{tracking_id}/cancel", summary="This endpoint is responsible for cancelling a users order")
-def cancelOrder(tracking_id: UUID, user: User = Depends(get_current_user)):
+def cancelOrder(tracking_id: str, user: User = Depends(get_current_user)):
     # this endpoint will first check if the order those exist in the database 
     orderCollection = db_client.sender.order
-    order = orderCollection.find_one({"tracking_id": {UUID(tracking_id)}})
+    order = orderCollection.find_one({"tracking_id": tracking_id})
     if order:
         # if the order is not null, meaning exists in the database then
         # update the status of the order 
+
         print(order, type(order))
-        return {"status":"My name is sydney"}
+        
+    else:
+        return {"status":"not found"}
