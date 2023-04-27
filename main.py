@@ -179,6 +179,18 @@ def viewOrders(user: User = Depends(get_current_user)):
         return user_orders
     except:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+
+
+@app.get("/orders/{tracking_id}", summary="view a specific order")
+def viewSingleOrder(tracking_id: str):
+    # check if the order is in the database 
+    orderCollection = db_client.sender.order
+    order = orderCollection.find_one({"tracking_id": tracking_id})
+    if order:
+        # if the order has been found then display it
+        return order
+    else: 
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"order with tracking id {tracking_id} is not found")
     
 @app.put("/orders/{tracking_id}/update", summary="Update order status adding the ")
 def updateOrder(tracking_id: str, update: UpdateOrderStatusModel):
@@ -196,10 +208,7 @@ def updateOrder(tracking_id: str, update: UpdateOrderStatusModel):
             if update_message != None:
                     print(order)
                 # if the message is of type string then it should not have a default of string 
-                    if order["order_history"] is None:
-                        update_message_list = [update_message]
-                    else:
-                        update_message_list = order["order_history"].append(update_message)
+                    update_message_list = order["order_history"].append(update_message)
                     order_update["order_history"] = update_message_list
             else:
                 # disregard the update method and just add the order that was previously there
@@ -242,3 +251,13 @@ def cancelOrder(tracking_id: str, user: User = Depends(get_current_user)):
         
     else:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="order not found")
+    
+
+@app.delete("/orders/{tracking_id}/delete", summary="This endpoint will permentaly delete data from the database")
+def deleteOrder(tracking_id: str):
+    try:
+        orderCollection = db_client.sender.order.find_one_and_delete({"tracking_id": tracking_id})
+        if orderCollection:
+            return {"status": f"Order with tracking id {tracking_id} has been deleted"}
+    except:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
