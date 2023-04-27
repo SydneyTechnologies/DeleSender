@@ -194,8 +194,12 @@ def updateOrder(tracking_id: str, update: UpdateOrderStatusModel):
             update_message = order_update.pop("update_message")
             # now add the update message to the previous update messages and then update the order history
             if update_message != None:
+                    print(order)
                 # if the message is of type string then it should not have a default of string 
-                    update_message_list = order["order_history"].append(update_message)
+                    if order["order_history"] is None:
+                        update_message_list = [update_message]
+                    else:
+                        update_message_list = order["order_history"].append(update_message)
                     order_update["order_history"] = update_message_list
             else:
                 # disregard the update method and just add the order that was previously there
