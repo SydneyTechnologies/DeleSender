@@ -195,8 +195,8 @@ def updateOrder(tracking_id: str, update: UpdateOrderStatusModel):
             # now add the update message to the previous update messages and then update the order history
             if update_message != None:
                 # if the message is of type string then it should not have a default of string 
-                update_message_list =[order["order_history"], update_message]
-                order_update["order_history"] = update_message_list
+                    update_message_list = order["order_history"].append(update_message)
+                    order_update["order_history"] = update_message_list
             else:
                 # disregard the update method and just add the order that was previously there
                 order_update["order_history"] = order["order_history"]
@@ -224,7 +224,7 @@ def cancelOrder(tracking_id: str, user: User = Depends(get_current_user)):
         # remove the value of update message from the dictionary
         update_message = order_update.pop("update_message")
         # now add the update message to the previous update messages and then update the order history
-        update_message_list =[order["order_history"], update_message] 
+        update_message_list = order["order_history"].append(update_message)
         order_update["order_history"] = update_message_list
         print(update_message_list)
 
