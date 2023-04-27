@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, status, Depends
 from utils import *
-from models import CreateOrderModel, Order
+from models import CreateOrderModel, Order, UpdateOrderStatusModel, OrderState
 from pydantic import BaseModel, ValidationError
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -182,9 +182,14 @@ def cancelOrder(tracking_id: str, user: User = Depends(get_current_user)):
     order = orderCollection.find_one({"tracking_id": tracking_id})
     if order:
         # if the order is not null, meaning exists in the database then
-        # update the status of the order 
-
-        print(order, type(order))
+        # update the status of the order to cancelled
+        order_update = UpdateOrderStatusModel(status=OrderState.cancelled, update_message="Order has been cancelled")
+        order_status = orderCollection.update_one({"tracking_id": tracking_id}, {"$set": order_update.dict()})
+        if order_status.acknowledged:
+            # the update process occurred successfully
+            return {"status": "order has been successfully cancelled"}
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="error occurred during cancel operation")
         
     else:
-        return {"status":"not found"}
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="order not found")
