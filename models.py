@@ -26,6 +26,6 @@ class Order(BaseModel):
     status: OrderState = Field(default=OrderState.ordered)
     date: str = Field(default=str(datetime.now().date))
     delivered_date: str | None = Field(default=None)
-    order_history: list[str] | None = Field(default=None)
+    order_history: list[str] | None = None
 
 

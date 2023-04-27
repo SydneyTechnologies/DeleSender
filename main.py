@@ -169,11 +169,46 @@ def viewOrders(user: User = Depends(get_current_user)):
     try: 
         print(user.email)
         results = order_collection.find({"owner_email": user.email})
+        if results: 
+            print("not empty")
         # get all the orders of the current user 
-
-        return [Order(**result) for result in results]
+            user_orders = []
+            for result in results:
+                result.pop("_id")
+                user_orders.append(result)
+        return user_orders
     except:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    
+@app.put("/orders/{tracking_id}/update", summary="Update order status adding the ")
+def updateOrder(tracking_id: str, update: UpdateOrderStatusModel):
+    orderCollection = db_client.sender.order
+    order = orderCollection.find_one({"tracking_id": tracking_id})
+    if order:
+        # first we check if the order exists then
+        # only make changes to an order if the order is not cancelled 
+        if order["status"] != OrderState.cancelled:
+            # if the order has not be cancelled then update the order 
+            order_update = update.dict()
+            # remove the value of update message from the dictionary
+            update_message = order_update.pop("update_message")
+            # now add the update message to the previous update messages and then update the order history
+            if update_message != None:
+                # if the message is of type string then it should not have a default of string 
+                update_message_list =[order["order_history"], update_message]
+                order_update["order_history"] = update_message_list
+            else:
+                # disregard the update method and just add the order that was previously there
+                order_update["order_history"] = order["order_history"]
+            order_status = orderCollection.update_one({"tracking_id": tracking_id}, {"$set": order_update})
+            if order_status.acknowledged:
+            # the update process occurred successfully
+                return {"status": "order has been successfully updated"}
+        else:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="The order you are trying to update has been cancelled")
+
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
 
 @app.put("/orders/{tracking_id}/cancel", summary="This endpoint is responsible for cancelling a users order")
 def cancelOrder(tracking_id: str, user: User = Depends(get_current_user)):
@@ -184,7 +219,17 @@ def cancelOrder(tracking_id: str, user: User = Depends(get_current_user)):
         # if the order is not null, meaning exists in the database then
         # update the status of the order to cancelled
         order_update = UpdateOrderStatusModel(status=OrderState.cancelled, update_message="Order has been cancelled")
-        order_status = orderCollection.update_one({"tracking_id": tracking_id}, {"$set": order_update.dict()})
+        # change the value of order_update to a dictionary 
+        order_update = order_update.dict()
+        # remove the value of update message from the dictionary
+        update_message = order_update.pop("update_message")
+        # now add the update message to the previous update messages and then update the order history
+        update_message_list =[order["order_history"], update_message] 
+        order_update["order_history"] = update_message_list
+        print(update_message_list)
+
+
+        order_status = orderCollection.update_one({"tracking_id": tracking_id}, {"$set": order_update})
         if order_status.acknowledged:
             # the update process occurred successfully
             return {"status": "order has been successfully cancelled"}
