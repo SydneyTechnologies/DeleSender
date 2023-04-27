@@ -17,14 +17,14 @@ class CreateOrderModel(BaseModel):
 class UpdateOrderStatusModel(BaseModel):
     status: OrderState = Field(default=OrderState.ordered)
     update_message: str | None = Field(default=None)
-    delivered_date: str = Field(default=str(datetime.now().date))
+    delivered_date: str = Field(default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
 
 class Order(BaseModel):
     tracking_id: str = Field(default=str(uuid4()))
     owner_email: str 
     description: str | None 
     status: OrderState = Field(default=OrderState.ordered)
-    date: str = Field(default=str(datetime.now().date))
+    date: str = Field(default=datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     delivered_date: str | None = Field(default=None)
     order_history: list[str] = []
 
