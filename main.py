@@ -188,6 +188,7 @@ def viewSingleOrder(tracking_id: str):
     order = orderCollection.find_one({"tracking_id": tracking_id})
     if order:
         # if the order has been found then display it
+        order.pop("_id")
         return order
     else: 
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"order with tracking id {tracking_id} is not found")
@@ -208,7 +209,8 @@ def updateOrder(tracking_id: str, update: UpdateOrderStatusModel):
             if update_message != None:
                     print(order)
                 # if the message is of type string then it should not have a default of string 
-                    update_message_list = order["order_history"].append(update_message)
+                    update_message_list = order["order_history"].copy()
+                    update_message_list.append(update_message)
                     order_update["order_history"] = update_message_list
             else:
                 # disregard the update method and just add the order that was previously there
@@ -237,7 +239,8 @@ def cancelOrder(tracking_id: str, user: User = Depends(get_current_user)):
         # remove the value of update message from the dictionary
         update_message = order_update.pop("update_message")
         # now add the update message to the previous update messages and then update the order history
-        update_message_list = order["order_history"].append(update_message)
+        update_message_list = order["order_history"].copy()
+        update_message_list.append(update_message)
         order_update["order_history"] = update_message_list
         print(update_message_list)
 
