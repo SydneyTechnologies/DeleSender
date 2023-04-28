@@ -20,7 +20,7 @@ origins = [
     "http://localhost:3001",
     "https://example.com",
     "https://www.example.com",
-    "https://final-year-project-gray.vercel.app/"
+    "https://final-year-project-gray.vercel.app"
 ]
 
 # Enable CORS for all origins
